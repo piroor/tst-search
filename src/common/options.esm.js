@@ -223,6 +223,12 @@ const isBeta = manifest.applications.gecko.id.endsWith('-dev');
 					#subpanel-header { display: none !important; }
 				`, },
 			},
+			apiProviderId: {
+				title: 'API Provider',
+				description: `Specifies the ID of the TST API provider. If you use a forked version of TST which provide API compatible to TST, ${manifest.name} can communicate with the addon instead of TST.`,
+				default: '',
+				input: { type: 'string', prefix: `Provider ID:`, },
+			},
 		},
 	},
 	export: {

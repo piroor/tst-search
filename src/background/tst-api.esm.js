@@ -1,5 +1,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import options from '../common/options.esm.js';
+
 /**
  * Boilerplate code to interact with the *Tree Style Tabs* extension.
  * @param {object}           options                 Options, see below:
@@ -29,6 +31,9 @@
  */
 export default function tstAPI({ getManifest, methods = [ ], events = { __proto__: null, }, onError = console.error, debug = false, }) {
 	const TST_ID = 'treestyletab@piro.sakura.ne.jp';
+	function getProviderId() {
+		return options.advanced.children.apiProviderId.value || TST_ID;
+	}
 	const ownName = browser.runtime.getManifest().name;
 
 	async function register() {
@@ -42,18 +47,28 @@ export default function tstAPI({ getManifest, methods = [ ], events = { __proto_
 		API.isRegistered = false;
 	}
 
+	let providerIdOnRegistered = null;
 	const TST = Object.fromEntries([
 		'register-self', 'unregister-self', ...methods,
 	].map(name => [
 		name.replace(/-([a-z])/g, (_, l) => l.toUpperCase()),
 		(options) => {
-			API.debug && console.info(ownName +': sendMessageExternal', TST_ID, { ...options, type: name, });
-			return browser.runtime.sendMessage(TST_ID, { ...options, type: name, }); // It would be nice if connection errors were distinguishable from errors on TST's side ...
+			let providerId = getProviderId();
+			switch (name) {
+				case 'register-self':
+					providerIdOnRegistered = providerId;
+					break;
+				case 'unregister-self':
+					providerId = providerIdOnRegistered;
+					break;
+			}
+			API.debug && console.info(ownName +': sendMessageExternal', providerId, { ...options, type: name, });
+			return browser.runtime.sendMessage(providerId, { ...options, type: name, }); // It would be nice if connection errors were distinguishable from errors on TST's side ...
 		},
 	]));
 
 	async function onMessageExternal(message, sender) { {
-		if (sender.id !== TST_ID) { return false; }
+		if (sender.id !== providerIdOnRegistered) { return false; }
 		API.debug && console.info(ownName +': onMessageExternal', ...arguments);
 	} try { switch (message.type) {
 		case 'ready': register().catch(onError); events.ready && (await events.ready(message)); break;
