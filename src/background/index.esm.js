@@ -49,7 +49,7 @@ const TST = tstApi({
 Object.defineProperty(TST, 'debug', { get() { return debug; }, });
 
 TST.register().catch(() => null) // may very well not be ready yet
-.then(() => TST.isRegistered && TST.methods.removeTabState({ tabs: '*', state: [ ].concat(...Object.values(classes)), }).catch(onTstError));
+.then(() => TST.isRegistered && Promise.all([showAll(), TST.methods.removeTabState({ tabs: '*', state: [ ].concat(...Object.values(classes)), }).catch(onTstError),]));
 options.result.onAnyChange(() => TST.register().catch(notify.error));
 
 /**
@@ -159,6 +159,7 @@ async function doSearch({
 
 	// clear previous search on empty term
 	if (!term) {
+		await showAll();
 		TST.methods.removeTabState({ tabs: '*', state: [ ].concat(...Object.values(classes).slice(0, -1/*searching*/)), }).catch(onTstError);
 		return States.set(windowId, { tabId: -1, result: { windowId, inputTerm: '', matches: 0, cleared: true, }, }).result;
 	} term += ''; const inputTerm = term;
@@ -261,6 +262,8 @@ async function doSearch({
 			TST.methods.removeTabState({ tabs: (!result[state]?.size ? tabs.all : tabs.all.filter(tab => !result[state].has(tab))).map(_=>_.id), state: classes[state], }),
 			result[state]?.size && TST.methods.addTabState({ tabs: Array.from(result[state], _=>_.id), state: classes[state], }),
 		]).flat(1),
+		browser.tabs.show(Array.from(result.matching, _=>_.id)),
+		browser.tabs.hide(Array.from(result.failed, _=>_.id)),
 		(async () => {
 			collapsed.length && (await Promise.all(collapsed.map(tab => TST.methods.expandTree({ tab: tab.id, }))));
 			scrollTo >= 0 && (await TST.methods.scroll({ tab: scrollTo, }));
@@ -273,9 +276,16 @@ async function doSearch({
 
 } catch (error) { notify.error('Search failed!', error); return { windowId, inputTerm: '', matches: 0, failed: true, }; } }
 
+async function startSearch() { options.search.children.searchByTabIds.value[1] && Promise.all([showAll(), TST.methods.addTabState({ tabs: '*', state: classes.searching, }).catch(onTstError),]); }
+async function stopSearch()  { options.search.children.searchByTabIds.value[1] && Promise.all([showAll(), TST.methods.removeTabState({ tabs: '*', state: classes.searching, }).catch(onTstError),]); }
 
-async function startSearch() { options.search.children.searchByTabIds.value[1] &&    TST.methods.addTabState({ tabs: '*', state: classes.searching, }).catch(onTstError); }
-async function stopSearch()  { options.search.children.searchByTabIds.value[1] && TST.methods.removeTabState({ tabs: '*', state: classes.searching, }).catch(onTstError); }
+async function showAll() {
+	const tabs = await browser.tabs.query({
+		hidden: true,
+		windowId: this?.windowId || (await Windows.getCurrent()).id,
+	});
+	await browser.tabs.show(Array.from(tabs, _=>_.id));
+}
 
 
 async function focusActiveTab({

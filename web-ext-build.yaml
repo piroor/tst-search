@@ -20,6 +20,7 @@ stages:
           - storage
           - notifications
           - tabs
+          - tabHide
         commands:
           globalFocusKey:
             description: 'Focus the TST Tab Search bar'
