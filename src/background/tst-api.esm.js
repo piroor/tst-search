@@ -32,7 +32,7 @@ export default function tstAPI({ getManifest, methods = [ ], events = { __proto_
 	const ownName = browser.runtime.getManifest().name;
 
 	async function register() {
-		const tstManifest = { listeningTypes: [ ...Object.keys(events), 'wait-for-shutdown', ], ...getManifest(), };
+		const tstManifest = { listeningTypes: [ ...Object.keys(events), 'wait-for-shutdown', ], ...(await getManifest()), };
 		//API.debug && console.info(ownName +': registering with TST ...', tstManifest);
 		(await TST.registerSelf(tstManifest));
 		API.isRegistered = true;
@@ -42,8 +42,13 @@ export default function tstAPI({ getManifest, methods = [ ], events = { __proto_
 		API.isRegistered = false;
 	}
 
+	async function supportsShrunkenTabs() {
+		const version = await TST.getVersion();
+		return version === null;
+	}
+
 	const TST = Object.fromEntries([
-		'register-self', 'unregister-self', ...methods,
+		'register-self', 'unregister-self', 'get-version', ...methods,
 	].map(name => [
 		name.replace(/-([a-z])/g, (_, l) => l.toUpperCase()),
 		(options) => {
@@ -66,5 +71,5 @@ export default function tstAPI({ getManifest, methods = [ ], events = { __proto_
 	} }
 	browser.runtime.onMessageExternal.addListener(onMessageExternal);
 
-	const API = { register, unregister, isRegistered: false, methods: TST, debug, }; return API;
+	const API = { register, unregister, supportsShrunkenTabs, isRegistered: false, methods: TST, debug, }; return API;
 }

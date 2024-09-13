@@ -28,27 +28,34 @@ const queueClearCache = debounce(() => { cache = null; }, 30e3);
 
 const onTstError = console.error.bind(console, 'TST error');
 const TST = tstApi({
-	getManifest() { return {
-		name: manifest.name,
-		icons: manifest.icons,
-		style: [ 'miss', 'child', 'hit', 'active', 'custom', ].map(
-			name => options.result.children[name].children.styles.children.map(style => { try {
-				const values = Array.isArray(style.value) ? style.value : [ style.value, ];
-				return typeof style.model.extra.get === 'function' ? style.model.extra.get(...values) : values[0] ? style.model.extra.value : '';
-			} catch (error) { console.error(error); return ''; } }).join('\n')
-		).join('\n')
-		+'\n'+ options.advanced.children.hideHeader.value
-		+'\n'+ String.raw`
-			.tab.${globalThis.CSS.escape(classes.searching[0])} tab-label .label-content::before {
-				content: attr(data-tab-id) ": ";
-			}
-		`,
-		subPanel: {
-			title: manifest.name,
-			url: Runtime.getURL('src/content/embed.html'),
-			initialHeight: '35px', fixedHeight: '35px',
-		},
-	}; },
+	async getManifest() {
+		const supportsShrunkenTabs = await TST.supportsShrunkenTabs();
+		return {
+			name: manifest.name,
+			icons: manifest.icons,
+			style: [ 'miss', 'child', 'hit', 'active', 'custom', ].map(
+				name => options.result.children[name].children.styles.children.map(style => { try {
+					if (style.name === 'hide' && !supportsShrunkenTabs) {
+						// TST 4.0 and later does not support shrinking of tabs due to restrictions of its virtual scrolling implementation.
+						return '';
+					}
+					const values = Array.isArray(style.value) ? style.value : [ style.value, ];
+					return typeof style.model.extra.get === 'function' ? style.model.extra.get(...values) : values[0] ? style.model.extra.value : '';
+				} catch (error) { console.error(error); return ''; } }).join('\n')
+			).join('\n')
+			+'\n'+ options.advanced.children.hideHeader.value
+			+'\n'+ String.raw`
+				.tab.${globalThis.CSS.escape(classes.searching[0])} tab-label .label-content::before {
+					content: attr(data-tab-id) ": ";
+				}
+			`,
+			subPanel: {
+				title: manifest.name,
+				url: Runtime.getURL('src/content/embed.html'),
+				initialHeight: '35px', fixedHeight: '35px',
+			},
+		};
+	},
 	methods: [
 		'get-tree',
 		'scroll',
