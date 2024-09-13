@@ -271,7 +271,7 @@ async function doSearch({
 			result[state]?.size && TST.methods.addTabState({ tabs: Array.from(result[state], _=>_.id), state: classes[state], }),
 		]).flat(1),
 		browser.tabs.show(Array.from(shownTabs, _=>_.id)),
-		browser.tabs.hide(Array.from(hiddenTabs, _=>_.id)),
+		hiddenTabs.length > 0 && browser.tabs.hide(Array.from(hiddenTabs, _=>_.id)),
 		(async () => {
 			collapsed.length && (await Promise.all(collapsed.map(tab => TST.methods.expandTree({ tab: tab.id, }))));
 			scrollTo >= 0 && (await TST.methods.scroll({ tab: scrollTo, }));
