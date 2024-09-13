@@ -12,6 +12,17 @@ import options from '../common/options.esm.js';
 
 let debug = false; options.debug.whenChange(([ value, ]) => { debug = value; });
 
+// constants
+const classes = {
+	matching: [ 'tst-search:matching', ], // applied to all tabs matching the search
+	hasChild: [ 'tst-search:child-matching', ], // applied to all tabs who have an "offspring" that is `matching` (potentially in addition to `matching` themselves)
+	hidden: /**@type{string[]}*/([ ]), // applied to `.hidden` tabs
+	failed: [ 'tst-search:not-matching', ], // applied to tabs that are neither `matching` nor `hasChild`
+	active: [ 'tst-search:active', ], // applied to a single one of the `matching` tabs
+	searching: [ 'tst-search:searching', ], // applied to all tabs while the search bar is focused
+};
+let cache = /**@type{{ tabs: Tab[] & { byId: Map<number, Tab>, all: Tab[], }, windowId: number, } | null}*/(null);
+const queueClearCache = debounce(() => { cache = null; }, 30e3);
 
 /// setup of/with TST
 
@@ -68,17 +79,6 @@ options.result.onAnyChange(() => TST.register().catch(notify.error));
 
 
 /// extension logic
-
-const classes = {
-	matching: [ 'tst-search:matching', ], // applied to all tabs matching the search
-	hasChild: [ 'tst-search:child-matching', ], // applied to all tabs who have an "offspring" that is `matching` (potentially in addition to `matching` themselves)
-	hidden: /**@type{string[]}*/([ ]), // applied to `.hidden` tabs
-	failed: [ 'tst-search:not-matching', ], // applied to tabs that are neither `matching` nor `hasChild`
-	active: [ 'tst-search:active', ], // applied to a single one of the `matching` tabs
-	searching: [ 'tst-search:searching', ], // applied to all tabs while the search bar is focused
-};
-let cache = /**@type{{ tabs: Tab[] & { byId: Map<number, Tab>, all: Tab[], }, windowId: number, } | null}*/(null);
-const queueClearCache = debounce(() => { cache = null; }, 30e3);
 
 /** @typedef {{
     tabId: number;
