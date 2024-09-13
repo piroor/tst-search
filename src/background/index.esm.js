@@ -257,13 +257,21 @@ async function doSearch({
 	: -1;
 
 	// apply tab states
+	const shownTabs = [
+		...(result.matching || []),
+		...(!options.result.children.miss.children.styles.children.hide.value && result.failed || []),
+	];
+	const hiddenTabs = [
+		...(options.result.children.miss.children.styles.children.hide.value && result.failed || []),
+		...(result.hidden || []),
+	];
 	(await Promise.all([
 		...Object.keys(classes).map(state => !classes[state].length ? [ ] : [
 			TST.methods.removeTabState({ tabs: (!result[state]?.size ? tabs.all : tabs.all.filter(tab => !result[state].has(tab))).map(_=>_.id), state: classes[state], }),
 			result[state]?.size && TST.methods.addTabState({ tabs: Array.from(result[state], _=>_.id), state: classes[state], }),
 		]).flat(1),
-		browser.tabs.show(Array.from(result.matching, _=>_.id)),
-		browser.tabs.hide(Array.from([...result.failed, ...(result.hidden || []),], _=>_.id)),
+		browser.tabs.show(Array.from(shownTabs, _=>_.id)),
+		browser.tabs.hide(Array.from(hiddenTabs, _=>_.id)),
 		(async () => {
 			collapsed.length && (await Promise.all(collapsed.map(tab => TST.methods.expandTree({ tab: tab.id, }))));
 			scrollTo >= 0 && (await TST.methods.scroll({ tab: scrollTo, }));
